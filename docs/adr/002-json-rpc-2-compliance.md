@@ -163,7 +163,7 @@ remains spec-complete on its own.
 
 **Positive**
 
-- A user (or LLM) reading the README sees `turul-rpc` claim JSON-RPC 2.0
+- A user reading the README sees `turul-rpc` claim JSON-RPC 2.0
   compliance, opens the spec, and finds the implementation matches each
   numbered section. No "almost compliant" footnotes.
 - Batch is no longer an unimplemented stub with a misleading comment.

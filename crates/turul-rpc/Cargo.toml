@@ -31,3 +31,7 @@ required-features = ["async"]
 [[example]]
 name = "batch_dispatch"
 required-features = ["async"]
+
+[[example]]
+name = "in_process_round_trip"
+required-features = ["async"]
