@@ -126,20 +126,152 @@ cargo run -p turul-rpc --example batch_dispatch       # §6 batch demo
 
 ## Release / publish
 
-Order (dependency-first):
+### Pre-publish gate sequence
+
+Run all of these before any tag or publish. Each must be green; do not
+skip.
+
+```bash
+# 1. Format must be clean (no drift).
+cargo fmt --all -- --check
+
+# 2. Strict clippy across every target and feature.
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+# 3. Full test suite passes with all features.
+cargo test --workspace --all-features
+
+# 4. Each crate's publish dry-run. Note: dependent-crate dry-runs ALL
+#    fail with "no matching package named turul-rpc-core" until the
+#    previous crate is actually on crates.io. That's a Cargo limitation,
+#    not a defect — only turul-rpc-core's dry-run gives a real signal
+#    pre-publish; the rest are verified during the live sequence.
+cargo publish --dry-run -p turul-rpc-core
+```
+
+### License hygiene before tag
+
+GitHub repo creation often inserts a placeholder LICENSE (we hit a
+GPL-3.0 placeholder before v0.1.0). Crate metadata (`Cargo.toml`
+`license = "MIT OR Apache-2.0"`) and the LICENSE file in the repo
+**must agree** before tagging. Standard layout for this workspace:
+
+- `LICENSE-MIT` — MIT text, copyright Nick Hortovanyi
+- `LICENSE-APACHE` — verbatim Apache 2.0 from <https://www.apache.org/licenses/LICENSE-2.0.txt>
+- README "License" section links both files explicitly with the
+  standard Rust contribution clause.
+
+GitHub's licensee tool only displays one license in the repo "About"
+sidebar even when both files are present (single-pick limitation). It
+typically picks Apache-2.0. crates.io correctly shows the full
+`MIT OR Apache-2.0` from `Cargo.toml` metadata.
+
+### Publish order (dependency-first)
 
 ```
 turul-rpc-core → turul-rpc-jsonrpc → turul-rpc-server → turul-rpc
 ```
 
 Each crate inherits `version` from `[workspace.package]`. Bump the
-workspace version before publishing.
+workspace version before publishing. Wait ~30s between publishes for
+crates.io's sparse index to propagate, otherwise the next
+`cargo publish` will fail with "no matching package" the same way the
+pre-publish dry-runs did.
 
-After publishing v0.1.0, the framework's
-`crates/turul-mcp-json-rpc-server` shim's path dep must be replaced
-with the crates.io version-only form (see framework Cargo.toml comment
-at `[workspace.dependencies] turul-rpc = ...`). That swap is the merge
-gate for `turul-mcp-framework` branch `extract/turul-rpc-shim`.
+```bash
+cd /Users/nick/turul-rpc
+cargo publish -p turul-rpc-core    && sleep 30
+cargo publish -p turul-rpc-jsonrpc && sleep 30
+cargo publish -p turul-rpc-server  && sleep 30
+cargo publish -p turul-rpc
+```
+
+`cargo publish` is **irreversible** — every published version
+permanently consumes that name + version slot. `cargo yank` only
+prevents new dependencies from resolving to it; it does not delete.
+
+### Tagging convention
+
+Annotated tags only (never lightweight). Tag name is `v<version>`
+matching `[workspace.package].version`. Tag message is structured to
+serve double duty as `gh release create` notes.
+
+```bash
+# Create annotated tag
+git tag -a v0.1.0 -m "turul-rpc 0.1.0
+
+Initial release of the generic JSON-RPC 2.0 framework extracted from
+turul-mcp-json-rpc-server (turul-mcp-framework 0.3.x).
+
+Four crates published from this workspace:
+- turul-rpc-core 0.1.0       — wire types
+- turul-rpc-jsonrpc 0.1.0    — codec, parser, JSON-RPC 2.0 §6 batch
+- turul-rpc-server 0.1.0     — async dispatcher, handler trait, session,
+                                streaming
+- turul-rpc 0.1.0            — facade re-exporting the above
+
+See CHANGELOG.md and docs/adr/ for the full release notes and the four
+ADRs governing the v0.1 design."
+
+# Push tag
+git push origin v0.1.0
+```
+
+Tag every release. Patches (`0.1.1`, `0.1.2`) get tags too. The tag is
+the source of truth that ties a git SHA to a published crates.io version.
+
+### GitHub release + repo metadata
+
+After pushing the tag, create a GitHub Release. Use `gh release create`
+so the release notes are markdown with structured links to the four
+crates on crates.io and the relevant ADRs:
+
+```bash
+gh release create v0.1.0 \
+  --title "turul-rpc 0.1.0" \
+  --notes "<markdown body — see v0.1.0 release for the template>"
+```
+
+Repo "About" metadata (description, homepage, topics) is set via
+`gh repo edit`. Do this once per repo at the v0.1.0 publish; refresh
+only if the description should change. Topics seed crates.io discovery
+search.
+
+```bash
+gh repo edit aussierobots/turul-rpc \
+  --description "Typed JSON-RPC 2.0 framework for Rust. Handlers return domain errors; the dispatcher owns the wire. Includes spec-conformant batch processing." \
+  --homepage "https://crates.io/crates/turul-rpc" \
+  --add-topic rust \
+  --add-topic json-rpc \
+  --add-topic jsonrpc-2-0 \
+  --add-topic rpc \
+  --add-topic async \
+  --add-topic tokio \
+  --add-topic mcp \
+  --add-topic model-context-protocol
+```
+
+### After-publish: framework dep swap
+
+Once all four crates are on crates.io, update the
+`turul-mcp-framework` `extract/turul-rpc-shim` branch to drop its
+sibling-path dep:
+
+```toml
+# crates/turul-mcp-framework/Cargo.toml [workspace.dependencies]
+# Replace:
+#   turul-rpc = { version = "0.1", path = "../turul-rpc/crates/turul-rpc", default-features = false }
+# With:
+turul-rpc = { version = "0.1", default-features = false }
+```
+
+Also delete the `!!! MERGE BLOCKER` comment block above that line. Then
+re-run the framework shim/integration gates (compliance, e2e,
+event_dispatcher_persistence, jsonrpc_parity, shim_compat,
+symbol_coverage), commit with a neutral subject like
+`Switch turul-rpc workspace dep from sibling path to crates.io`, and
+push the framework branch. That swap removes the merge blocker
+documented in framework ADR-025.
 
 ## ADRs
 
