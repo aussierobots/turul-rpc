@@ -25,13 +25,26 @@ Most JSON-RPC crates either hand you raw envelopes or hide the wire entirely.
 1. **Handlers return `Result<Value, YourError>`** — never `JsonRpcError`.
 2. **Dispatcher converts `YourError → JsonRpcError`** via your `ToJsonRpcError` impl. One boundary, one direction.
 3. **Transport-agnostic.** Bring your own HTTP/SSE/stdio/Lambda. The crate is pure dispatch and types.
-4. **JSON-RPC 2.0 batch** is implemented and tested per spec.
+4. **JSON-RPC 2.0 batch** is implemented and tested per spec (§6).
+
+## Compliance posture
+
+`turul-rpc 0.1` implements JSON-RPC 2.0 with **one documented departure**:
+incoming requests with `"id": null` are rejected as `Invalid Request`
+(`-32600`). The spec permits null ids but discourages them; this crate
+takes the strict line at the type level (`RequestId = {String, Number}`).
+Server-emitted error responses correctly use `id: null` for unparseable
+or unidentifiable requests as the spec requires. See
+[ADR-002](docs/adr/002-json-rpc-2-compliance.md) for full rationale and
+the v0.2 plan to surface a permissive codec-level type for callers who
+need to accept null-id requests.
 
 ## Quick start
 
 ```rust
 use turul_rpc::{JsonRpcDispatcher, JsonRpcHandler, RequestParams, SessionContext};
-use turul_rpc::error::{JsonRpcErrorObject, ToJsonRpcError};
+use turul_rpc::error::JsonRpcErrorObject;
+use turul_rpc::r#async::ToJsonRpcError;
 use async_trait::async_trait;
 use serde_json::{json, Value};
 

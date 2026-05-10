@@ -7,9 +7,8 @@ use turul_rpc_core::error::JsonRpcError;
 use turul_rpc_core::notification::JsonRpcNotification;
 use turul_rpc_core::request::JsonRpcRequest;
 use turul_rpc_core::response::{JsonRpcMessage, ResponseResult};
-use turul_rpc_jsonrpc::{
-    parse_json_rpc_batch, BatchOrSingle, JsonRpcMessage as IncomingMessage, JsonRpcMessageResult,
-};
+use turul_rpc_jsonrpc::batch::{parse_json_rpc_batch, BatchOrSingle};
+use turul_rpc_jsonrpc::{JsonRpcMessage as IncomingMessage, JsonRpcMessageResult};
 
 use crate::handler::{JsonRpcHandler, ToJsonRpcError};
 use crate::session::SessionContext;
@@ -189,7 +188,12 @@ where
                 let mut responses: Vec<Value> = Vec::with_capacity(items.len());
                 for parsed in items {
                     let r = self.dispatch_one(parsed).await;
-                    if let Some(v) = r.to_json_value() {
+                    let v = match r {
+                        JsonRpcMessageResult::Response(resp) => serde_json::to_value(&resp).ok(),
+                        JsonRpcMessageResult::Error(err) => serde_json::to_value(&err).ok(),
+                        JsonRpcMessageResult::NoResponse => None,
+                    };
+                    if let Some(v) = v {
                         responses.push(v);
                     }
                 }

@@ -6,7 +6,6 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-rust-version.workspace = true
 description = "Typed JSON-RPC 2.0 framework — facade re-exporting turul-rpc-core, turul-rpc-jsonrpc, and turul-rpc-server."
 
 [features]
@@ -18,3 +17,17 @@ streams = ["async", "turul-rpc-server/streams"]
 turul-rpc-core.workspace = true
 turul-rpc-jsonrpc.workspace = true
 turul-rpc-server = { workspace = true }
+
+[dev-dependencies]
+async-trait.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true }
+
+[[example]]
+name = "simple_calculator"
+required-features = ["async"]
+
+[[example]]
+name = "batch_dispatch"
+required-features = ["async"]

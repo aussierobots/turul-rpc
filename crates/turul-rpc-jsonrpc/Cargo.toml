@@ -6,7 +6,6 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-rust-version.workspace = true
 description = "JSON-RPC 2.0 codec, parser, and batch processing for turul-rpc."
 
 [dependencies]

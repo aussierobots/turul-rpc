@@ -48,16 +48,62 @@ identically when re-exported from `turul-rpc-core::JsonRpcError`.
 
 The shim re-exports every item the original published, at every original
 path. Concretely, every `pub use` line in the original `lib.rs` and
-`prelude.rs` is mirrored. The verification gate is:
+`prelude.rs` is mirrored.
 
-```bash
-# in turul-mcp-framework, before and after the shim swap:
-cargo public-api -p turul-mcp-json-rpc-server > /tmp/api.txt
-diff /tmp/api-before.txt /tmp/api-after.txt
-# MUST be empty
+#### The gate: no removals, no signature changes; additive items reviewed
+
+`cargo public-api -p turul-mcp-json-rpc-server` of a re-export crate
+collapses to `pub use` listings (the underlying types' `impl` blocks are
+listed under their definition crate, `turul-rpc-core`). A literal
+"diff must be empty" gate is therefore impossible in practice — and not
+useful, because what we actually care about is whether **every previously
+public path still resolves with the same nominal type and signature**.
+
+The real gate has three parts:
+
+1. **Symbol coverage.** A test
+   (`turul-mcp-json-rpc-server/tests/symbol_coverage.rs` in the framework
+   repo) names every top-level public path from the original
+   `cargo public-api` snapshot via `use` statements. The file fails to
+   compile if any path is unreachable.
+2. **Type identity.** A second test
+   (`turul-mcp-json-rpc-server/tests/shim_compat.rs`) asserts that the
+   same nominal type is reachable via multiple paths
+   (`turul_mcp_json_rpc_server::RequestId == turul_rpc::RequestId ==
+   turul_rpc::types::RequestId`).
+3. **Additive items reviewed and listed.** New methods on existing
+   re-exported types and new free items added to `turul-rpc-*` crates
+   become reachable through the shim by virtue of `pub use`. Such
+   additions MUST be:
+   - listed in the framework `CHANGELOG.md` under `### Added`, AND
+   - acknowledged here so the next ADR revision review can decide
+     whether to hide them via curated `pub use` (see "Hiding new APIs"
+     below).
+
+The new headline batch APIs (`parse_json_rpc_batch`, `BatchOrSingle`)
+live in `turul-rpc-jsonrpc::batch`, a module **not re-exported by the
+shim**. Users who want them go through `turul-rpc` directly. The
+dispatcher method `JsonRpcDispatcher::handle_batch` IS reachable through
+the shim because re-exporting a type brings its methods; this is listed
+in the framework CHANGELOG `[0.3.39] / Added` as an explicit additive
+item per the gate above.
+
+#### Hiding new APIs
+
+When a new public item in `turul-rpc-*` should NOT appear through the
+shim, place it in a module that the shim does not re-export. The
+framework shim's curated `dispatch` re-export looks like:
+
+```rust
+pub mod dispatch {
+    pub use turul_rpc::dispatch::{
+        JsonRpcMessage, JsonRpcMessageResult, parse_json_rpc_message,
+        parse_json_rpc_messages, create_success_response, create_error_response,
+    };
+    // parse_json_rpc_batch and BatchOrSingle live in turul_rpc::batch and
+    // are intentionally NOT re-exported here.
+}
 ```
-
-Any non-empty diff blocks the shim release.
 
 ### Feature flag forwarding
 

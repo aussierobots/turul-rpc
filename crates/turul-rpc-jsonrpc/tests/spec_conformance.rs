@@ -6,9 +6,8 @@
 use serde_json::{json, Value};
 use turul_rpc_core::error_codes::*;
 use turul_rpc_core::types::RequestId;
-use turul_rpc_jsonrpc::{
-    parse_json_rpc_batch, parse_json_rpc_message, BatchOrSingle, JsonRpcMessage,
-};
+use turul_rpc_jsonrpc::batch::{parse_json_rpc_batch, BatchOrSingle};
+use turul_rpc_jsonrpc::{parse_json_rpc_message, JsonRpcMessage};
 
 // -----------------------------------------------------------------------------
 // §4.1 — `jsonrpc` field strictness

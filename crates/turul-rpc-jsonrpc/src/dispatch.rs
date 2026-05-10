@@ -46,16 +46,6 @@ impl JsonRpcMessageResult {
         }
     }
 
-    /// Convert to a `serde_json::Value` if there's a response to assemble
-    /// into a batch.
-    pub fn to_json_value(&self) -> Option<Value> {
-        match self {
-            JsonRpcMessageResult::Response(response) => serde_json::to_value(response).ok(),
-            JsonRpcMessageResult::Error(error) => serde_json::to_value(error).ok(),
-            JsonRpcMessageResult::NoResponse => None,
-        }
-    }
-
     /// Check if this result represents an error.
     pub fn is_error(&self) -> bool {
         matches!(self, JsonRpcMessageResult::Error(_))
@@ -129,57 +119,29 @@ fn extract_id(obj: &serde_json::Map<String, Value>) -> Option<RequestId> {
     })
 }
 
-/// Outcome of parsing a request body that may be a batch or a single message.
-///
-/// JSON-RPC 2.0 §6 distinguishes three cases:
-///
-/// - **Single**: body is a JSON object → one message.
-/// - **Batch**: body is a non-empty JSON array → multiple messages.
-/// - **EmptyBatch**: body is `[]` → spec error, respond with single
-///   Invalid Request.
-#[derive(Debug)]
-pub enum BatchOrSingle {
-    Single(Result<JsonRpcMessage, JsonRpcError>),
-    Batch(Vec<Result<JsonRpcMessage, JsonRpcError>>),
-    EmptyBatch,
-}
-
-/// Parse a request body, distinguishing single message from batch.
-///
-/// Per JSON-RPC 2.0 §6:
-/// - Empty array → caller should emit a single `Invalid Request` (`-32600`)
-///   with `id: null`. This function returns [`BatchOrSingle::EmptyBatch`];
-///   the dispatcher constructs the error response.
-/// - Each batch member is parsed independently. Per-member parse failures
-///   appear as `Err(JsonRpcError)` entries in the returned vec.
-pub fn parse_json_rpc_batch(json_str: &str) -> BatchOrSingle {
-    let value: Value = match serde_json::from_str(json_str) {
-        Ok(v) => v,
-        Err(_) => return BatchOrSingle::Single(Err(JsonRpcError::parse_error())),
-    };
-
-    match value {
-        Value::Array(arr) if arr.is_empty() => BatchOrSingle::EmptyBatch,
-        Value::Array(arr) => {
-            let messages = arr.into_iter().map(parse_json_rpc_value).collect();
-            BatchOrSingle::Batch(messages)
-        }
-        other => BatchOrSingle::Single(parse_json_rpc_value(other)),
-    }
-}
-
 /// Parse multiple JSON-RPC messages from a single JSON string.
 ///
-/// **Deprecated**: use [`parse_json_rpc_batch`] for spec-correct batch
-/// handling. This function is retained for compatibility with the
-/// `turul-mcp-json-rpc-server 0.3.x` API and returns a single-element vec
-/// for non-array bodies.
+/// **Compatibility shim** for the `turul-mcp-json-rpc-server 0.3.x` API.
+/// New code should use [`crate::batch::parse_json_rpc_batch`] for proper
+/// JSON-RPC 2.0 §6 batch semantics. This function returns a single-element
+/// vec for non-array bodies and an empty vec for an empty array body —
+/// it is **not** spec-correct on its own; the dispatcher must construct
+/// the `Invalid Request` response for empty batches.
 pub fn parse_json_rpc_messages(json_str: &str) -> Vec<Result<JsonRpcMessage, JsonRpcError>> {
+    use crate::batch::{parse_json_rpc_batch, BatchOrSingle};
     match parse_json_rpc_batch(json_str) {
         BatchOrSingle::Single(r) => vec![r],
         BatchOrSingle::Batch(items) => items,
         BatchOrSingle::EmptyBatch => vec![Err(JsonRpcError::invalid_request(None))],
     }
+}
+
+/// Parse a single JSON-RPC value as a message. Used by both the single-message
+/// parser and the batch parser to avoid round-trips through string serialization.
+pub(crate) fn parse_value_into_message(
+    value: Value,
+) -> Result<JsonRpcMessage, JsonRpcError> {
+    parse_json_rpc_value(value)
 }
 
 /// Create a simple success response.
