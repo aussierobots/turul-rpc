@@ -1,0 +1,15 @@
+[package]
+name = "turul-rpc-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "JSON-RPC 2.0 wire types for turul-rpc — request, response, notification, error. Pure data, no async."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

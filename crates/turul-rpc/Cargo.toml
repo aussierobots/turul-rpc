@@ -1,0 +1,20 @@
+[package]
+name = "turul-rpc"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Typed JSON-RPC 2.0 framework — facade re-exporting turul-rpc-core, turul-rpc-jsonrpc, and turul-rpc-server."
+
+[features]
+default = ["async"]
+async = ["turul-rpc-server/async"]
+streams = ["async", "turul-rpc-server/streams"]
+
+[dependencies]
+turul-rpc-core.workspace = true
+turul-rpc-jsonrpc.workspace = true
+turul-rpc-server = { workspace = true }

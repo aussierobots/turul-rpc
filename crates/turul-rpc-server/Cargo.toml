@@ -1,0 +1,27 @@
+[package]
+name = "turul-rpc-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "Async JSON-RPC 2.0 dispatcher, handler trait, and session context for turul-rpc."
+
+[features]
+default = ["async"]
+async = ["dep:async-trait", "dep:futures"]
+streams = ["async"]
+
+[dependencies]
+turul-rpc-core.workspace = true
+turul-rpc-jsonrpc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+thiserror.workspace = true

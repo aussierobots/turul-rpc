@@ -1,0 +1,15 @@
+[package]
+name = "turul-rpc-jsonrpc"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "JSON-RPC 2.0 codec, parser, and batch processing for turul-rpc."
+
+[dependencies]
+turul-rpc-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
