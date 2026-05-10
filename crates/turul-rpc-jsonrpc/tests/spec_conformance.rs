@@ -134,7 +134,9 @@ fn invalid_request_echoes_id_when_parseable() {
 fn server_error_range_constants() {
     assert_eq!(SERVER_ERROR_START, -32099);
     assert_eq!(SERVER_ERROR_END, -32000);
-    assert!(SERVER_ERROR_START < SERVER_ERROR_END);
+    // Const values are checked at the assert_eq above; the ordering invariant
+    // is captured by spec note in ADR-002 §"Standard error codes" and the
+    // server_error() bounds check (tested separately).
 }
 
 #[test]

@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/turul-rpc-core",
     "crates/turul-rpc-jsonrpc",
@@ -21,7 +21,12 @@ serde_json = "1.0"
 thiserror = "2.0"
 async-trait = "0.1"
 futures = "0.3"
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "test-util"] }
+tokio = { version = "1", features = [
+    "macros",
+    "rt",
+    "rt-multi-thread",
+    "test-util",
+] }
 
 # Internal workspace crates
 turul-rpc-core = { version = "0.1", path = "crates/turul-rpc-core" }

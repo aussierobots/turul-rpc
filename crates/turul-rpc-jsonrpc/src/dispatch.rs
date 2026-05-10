@@ -96,10 +96,10 @@ fn parse_json_rpc_value(value: Value) -> Result<JsonRpcMessage, JsonRpcError> {
             return Err(JsonRpcError::invalid_request(None));
         }
         // Reject fractional numeric ids (no `as_i64()`).
-        if let Some(Value::Number(n)) = obj.get("id") {
-            if n.as_i64().is_none() {
-                return Err(JsonRpcError::invalid_request(None));
-            }
+        if let Some(Value::Number(n)) = obj.get("id")
+            && n.as_i64().is_none()
+        {
+            return Err(JsonRpcError::invalid_request(None));
         }
         serde_json::from_value::<JsonRpcRequest>(value.clone())
             .map(JsonRpcMessage::Request)
