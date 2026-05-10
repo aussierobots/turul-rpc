@@ -10,7 +10,7 @@
 use serde_json::Value;
 use turul_rpc_core::error::JsonRpcError;
 
-use crate::dispatch::{parse_value_into_message, JsonRpcMessage};
+use crate::dispatch::{JsonRpcMessage, parse_value_into_message};
 
 /// Outcome of parsing a request body that may be a batch or a single message.
 ///

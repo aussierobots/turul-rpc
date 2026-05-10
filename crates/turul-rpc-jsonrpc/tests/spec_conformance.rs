@@ -3,11 +3,11 @@
 //! Each test maps to a numbered section of <https://www.jsonrpc.org/specification>.
 //! See ADR-002 in the `turul-rpc` repository for the full compliance contract.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use turul_rpc_core::error_codes::*;
 use turul_rpc_core::types::RequestId;
-use turul_rpc_jsonrpc::batch::{parse_json_rpc_batch, BatchOrSingle};
-use turul_rpc_jsonrpc::{parse_json_rpc_message, JsonRpcMessage};
+use turul_rpc_jsonrpc::batch::{BatchOrSingle, parse_json_rpc_batch};
+use turul_rpc_jsonrpc::{JsonRpcMessage, parse_json_rpc_message};
 
 // -----------------------------------------------------------------------------
 // §4.1 — `jsonrpc` field strictness
@@ -39,10 +39,7 @@ fn rejects_missing_jsonrpc_field() {
 fn accepts_string_id() {
     let m = parse_json_rpc_message(r#"{"jsonrpc":"2.0","method":"x","id":"abc"}"#).unwrap();
     assert!(m.is_request());
-    assert_eq!(
-        m.request_id(),
-        Some(&RequestId::String("abc".to_string()))
-    );
+    assert_eq!(m.request_id(), Some(&RequestId::String("abc".to_string())));
 }
 
 #[test]
@@ -242,9 +239,11 @@ fn batch_with_all_invalid_members() {
     };
     assert_eq!(batch.len(), 3);
     assert!(batch.iter().all(|r| r.is_err()));
-    assert!(batch
-        .iter()
-        .all(|r| r.as_ref().unwrap_err().error.code == INVALID_REQUEST));
+    assert!(
+        batch
+            .iter()
+            .all(|r| r.as_ref().unwrap_err().error.code == INVALID_REQUEST)
+    );
 }
 
 #[test]

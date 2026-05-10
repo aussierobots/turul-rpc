@@ -20,10 +20,10 @@
 use std::sync::atomic::{AtomicI64, Ordering};
 
 use async_trait::async_trait;
-use serde_json::{json, Value};
-use turul_rpc::dispatch::{parse_json_rpc_message, JsonRpcMessage as IncomingMessage};
-use turul_rpc::error::JsonRpcErrorObject;
+use serde_json::{Value, json};
 use turul_rpc::r#async::ToJsonRpcError;
+use turul_rpc::dispatch::{JsonRpcMessage as IncomingMessage, parse_json_rpc_message};
+use turul_rpc::error::JsonRpcErrorObject;
 use turul_rpc::{
     JsonRpcDispatcher, JsonRpcHandler, JsonRpcMessage, JsonRpcRequest, RequestId, RequestParams,
     SessionContext,
@@ -164,7 +164,10 @@ fn parse_demo() {
     match parsed {
         IncomingMessage::Request(_) => unreachable!(),
         IncomingMessage::Notification(n) => {
-            println!("\nparsed notification: method={} params={:?}", n.method, n.params);
+            println!(
+                "\nparsed notification: method={} params={:?}",
+                n.method, n.params
+            );
         }
     }
 }

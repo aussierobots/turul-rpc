@@ -12,11 +12,11 @@
 //! [`ToJsonRpcError`]: handler::ToJsonRpcError
 
 #[cfg(feature = "async")]
+pub mod dispatcher;
+#[cfg(feature = "async")]
 pub mod handler;
 #[cfg(feature = "async")]
 pub mod session;
-#[cfg(feature = "async")]
-pub mod dispatcher;
 
 #[cfg(feature = "streams")]
 pub mod streaming;

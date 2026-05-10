@@ -11,9 +11,9 @@
 //! ```
 
 use async_trait::async_trait;
-use serde_json::{json, Value};
-use turul_rpc::error::JsonRpcErrorObject;
+use serde_json::{Value, json};
 use turul_rpc::r#async::ToJsonRpcError;
+use turul_rpc::error::JsonRpcErrorObject;
 use turul_rpc::{JsonRpcDispatcher, JsonRpcHandler, RequestParams, SessionContext};
 
 #[derive(thiserror::Error, Debug)]
@@ -38,7 +38,9 @@ impl JsonRpcHandler for Echo {
         params: Option<RequestParams>,
         _session: Option<SessionContext>,
     ) -> Result<Value, EchoError> {
-        Ok(json!({ "echoed_method": method, "echoed_params": params.as_ref().map(|p| p.to_value()) }))
+        Ok(
+            json!({ "echoed_method": method, "echoed_params": params.as_ref().map(|p| p.to_value()) }),
+        )
     }
 
     async fn handle_notification(

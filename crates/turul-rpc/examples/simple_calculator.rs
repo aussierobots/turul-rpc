@@ -15,9 +15,9 @@
 use std::io::{self, BufRead, Write};
 
 use async_trait::async_trait;
-use serde_json::{json, Value};
-use turul_rpc::error::JsonRpcErrorObject;
+use serde_json::{Value, json};
 use turul_rpc::r#async::ToJsonRpcError;
+use turul_rpc::error::JsonRpcErrorObject;
 use turul_rpc::{JsonRpcDispatcher, JsonRpcHandler, RequestParams, SessionContext};
 
 #[derive(thiserror::Error, Debug)]
@@ -94,7 +94,9 @@ fn main() -> io::Result<()> {
     let stdout = io::stdout();
     let mut out = stdout.lock();
 
-    eprintln!("turul-rpc simple_calculator listening on stdin (one JSON request per line; Ctrl-D to exit)");
+    eprintln!(
+        "turul-rpc simple_calculator listening on stdin (one JSON request per line; Ctrl-D to exit)"
+    );
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()

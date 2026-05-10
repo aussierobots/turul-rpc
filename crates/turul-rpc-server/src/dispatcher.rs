@@ -7,7 +7,7 @@ use turul_rpc_core::error::JsonRpcError;
 use turul_rpc_core::notification::JsonRpcNotification;
 use turul_rpc_core::request::JsonRpcRequest;
 use turul_rpc_core::response::{JsonRpcMessage, ResponseResult};
-use turul_rpc_jsonrpc::batch::{parse_json_rpc_batch, BatchOrSingle};
+use turul_rpc_jsonrpc::batch::{BatchOrSingle, parse_json_rpc_batch};
 use turul_rpc_jsonrpc::{JsonRpcMessage as IncomingMessage, JsonRpcMessageResult};
 
 use crate::handler::{JsonRpcHandler, ToJsonRpcError};
@@ -102,18 +102,14 @@ where
             .or(self.default_handler.as_ref());
 
         match handler {
-            Some(handler) => {
-                match handler.handle(&request.method, request.params, None).await {
-                    Ok(result) => {
-                        JsonRpcMessage::success(request.id, ResponseResult::Success(result))
-                    }
-                    Err(domain_error) => {
-                        let error_object = domain_error.to_error_object();
-                        let rpc_error = JsonRpcError::new(Some(request.id.clone()), error_object);
-                        JsonRpcMessage::error(rpc_error)
-                    }
+            Some(handler) => match handler.handle(&request.method, request.params, None).await {
+                Ok(result) => JsonRpcMessage::success(request.id, ResponseResult::Success(result)),
+                Err(domain_error) => {
+                    let error_object = domain_error.to_error_object();
+                    let rpc_error = JsonRpcError::new(Some(request.id.clone()), error_object);
+                    JsonRpcMessage::error(rpc_error)
                 }
-            }
+            },
             None => {
                 let error = JsonRpcError::method_not_found(request.id.clone(), &request.method);
                 JsonRpcMessage::error(error)
@@ -152,11 +148,7 @@ where
         match handler {
             Some(handler) => {
                 handler
-                    .handle_notification(
-                        &notification.method,
-                        notification.params,
-                        session_context,
-                    )
+                    .handle_notification(&notification.method, notification.params, session_context)
                     .await
             }
             None => Ok(()),

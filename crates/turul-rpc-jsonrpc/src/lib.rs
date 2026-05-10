@@ -26,8 +26,8 @@ pub mod dispatch;
 // module path (not re-exported here) so that the
 // `turul-mcp-json-rpc-server 0.3.39` shim does not surface the new batch
 // APIs through the v0.3.38 dispatch path. See ADR-003.
+pub use batch::{BatchOrSingle, parse_json_rpc_batch};
 pub use dispatch::{
-    parse_json_rpc_message, parse_json_rpc_messages, JsonRpcMessage, JsonRpcMessageResult,
-    create_error_response, create_success_response,
+    JsonRpcMessage, JsonRpcMessageResult, create_error_response, create_success_response,
+    parse_json_rpc_message, parse_json_rpc_messages,
 };
-pub use batch::{parse_json_rpc_batch, BatchOrSingle};

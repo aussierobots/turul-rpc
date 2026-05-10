@@ -33,7 +33,10 @@ pub enum JsonRpcFrame {
     /// Partial result chunk.
     PartialResult { request_id: RequestId, data: Value },
     /// Final result (ends the stream).
-    FinalResult { request_id: RequestId, result: Value },
+    FinalResult {
+        request_id: RequestId,
+        result: Value,
+    },
     /// Error result (ends the stream).
     Error {
         request_id: RequestId,

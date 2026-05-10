@@ -128,7 +128,7 @@ fn extract_id(obj: &serde_json::Map<String, Value>) -> Option<RequestId> {
 /// it is **not** spec-correct on its own; the dispatcher must construct
 /// the `Invalid Request` response for empty batches.
 pub fn parse_json_rpc_messages(json_str: &str) -> Vec<Result<JsonRpcMessage, JsonRpcError>> {
-    use crate::batch::{parse_json_rpc_batch, BatchOrSingle};
+    use crate::batch::{BatchOrSingle, parse_json_rpc_batch};
     match parse_json_rpc_batch(json_str) {
         BatchOrSingle::Single(r) => vec![r],
         BatchOrSingle::Batch(items) => items,
@@ -138,9 +138,7 @@ pub fn parse_json_rpc_messages(json_str: &str) -> Vec<Result<JsonRpcMessage, Jso
 
 /// Parse a single JSON-RPC value as a message. Used by both the single-message
 /// parser and the batch parser to avoid round-trips through string serialization.
-pub(crate) fn parse_value_into_message(
-    value: Value,
-) -> Result<JsonRpcMessage, JsonRpcError> {
+pub(crate) fn parse_value_into_message(value: Value) -> Result<JsonRpcMessage, JsonRpcError> {
     parse_json_rpc_value(value)
 }
 
