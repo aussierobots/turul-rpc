@@ -105,7 +105,7 @@ fn parse_json_rpc_value(value: Value) -> Result<JsonRpcMessage, JsonRpcError> {
     }
 }
 
-fn extract_id(obj: &serde_json::Map<String, Value>) -> Option<RequestId> {
+pub(crate) fn extract_id(obj: &serde_json::Map<String, Value>) -> Option<RequestId> {
     obj.get("id").and_then(|v| match v {
         Value::String(s) => Some(RequestId::String(s.clone())),
         Value::Number(n) => n.as_i64().map(RequestId::Number),

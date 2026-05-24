@@ -19,7 +19,13 @@ on the [`turul-rpc`] facade**, which re-exports this crate's items.
   parsing. Distinguishes single-object body, non-empty batch array, and
   empty batch (which the dispatcher answers with a single
   `Invalid Request -32600` per spec).
-- `JsonRpcMessage` — incoming union (`Request | Notification`).
+- `JsonRpcMessage` — incoming union (`Request | Notification`) parsed by a
+  server.
+- `JsonRpcWireMessage` + `parse_json_rpc_wire_message` (module `frame`) — the
+  bidirectional union (`Request | Notification | Response`), i.e. the schema's
+  `JSONRPCMessage`. What a client or peer reads off the wire when responses are
+  also in play. The parser validates structure rather than using
+  `#[serde(untagged)]` (which would misclassify malformed-id requests).
 - `JsonRpcMessageResult` — outcome shape consumed by dispatchers.
 - Helper constructors: `create_success_response`, `create_error_response`.
 
@@ -43,11 +49,10 @@ rules in. See [ADR-002] in the workspace for the full compliance contract.
 ## Compatibility note
 
 The `parse_json_rpc_batch` and `BatchOrSingle` items live in this
-crate's `batch` module, intentionally separate from the legacy
-`dispatch` module. The `turul-mcp-json-rpc-server 0.3.39` shim
-re-exports `dispatch::*` (preserving the v0.3.38 surface) but
-**not** `batch::*` — so 0.3.x consumers see no API addition through the
-shim. New code that wants batch processing should depend on
+crate's `batch` module, intentionally separate from the `dispatch`
+module. The `turul-mcp-json-rpc-server` (0.3.x) shim re-exports
+`dispatch::*` but **not** `batch::*`, so shim consumers see no API
+addition. New code that wants batch processing should depend on
 `turul-rpc` directly.
 
 ## License

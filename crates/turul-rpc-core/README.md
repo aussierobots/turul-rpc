@@ -20,7 +20,7 @@ paths.
 |---|---|
 | `types` | `RequestId`, `JsonRpcVersion` |
 | `request` | `JsonRpcRequest`, `RequestParams` |
-| `response` | `JsonRpcResponse`, `ResponseResult`, `JsonRpcMessage` (response union) |
+| `response` | `JsonRpcResponse` (the §5 Response union: `Success \| Error`), `JsonRpcSuccessResponse`, `ResponseResult` |
 | `notification` | `JsonRpcNotification` |
 | `error` | `JsonRpcError`, `JsonRpcErrorObject`, `JsonRpcErrorCode`, `JsonRpcTransportError` |
 | `error_codes` | Spec constants: `PARSE_ERROR`, `INVALID_REQUEST`, `METHOD_NOT_FOUND`, `INVALID_PARAMS`, `INTERNAL_ERROR`, `SERVER_ERROR_START`, `SERVER_ERROR_END` |
@@ -37,12 +37,22 @@ Plus the crate-root `JSONRPC_VERSION` constant.
 
 For a typical async server, depend on [`turul-rpc`] instead.
 
-## Compliance posture
+## `RequestId`
 
-`turul-rpc` declares JSON-RPC 2.0 compliance with **one documented
-departure**: incoming requests with `"id": null` are rejected as Invalid
-Request (`-32600`). The `RequestId` enum has only `String` and `Number`
-variants, never `Null`. See [ADR-002] in the workspace.
+```rust
+pub enum RequestId {
+    String(String),
+    Number(i64),
+    Null,
+}
+```
+
+`RequestId` is spec-conformant per JSON-RPC 2.0 §4.2: incoming `"id":
+null` is **accepted** (permitted, though the spec discourages it).
+Fractional numeric ids are rejected — only `i64` is representable.
+`From` is implemented for `i64`, `i32`, `u32`, `&str`, and `String`, so
+most call sites can write `1.into()` or `"abc".into()` without a cast.
+See [ADR-002] in the workspace for the full posture.
 
 [ADR-002]: https://github.com/aussierobots/turul-rpc/blob/main/docs/adr/002-json-rpc-2-compliance.md
 

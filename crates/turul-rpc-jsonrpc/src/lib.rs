@@ -20,6 +20,7 @@
 
 pub mod batch;
 pub mod dispatch;
+pub mod frame;
 
 // Re-export the dispatch module's public items at the crate root for
 // ergonomic access. The `batch` module is intentionally kept as a separate

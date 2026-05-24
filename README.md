@@ -2,9 +2,10 @@
 
 > Typed JSON-RPC 2.0 framework for Rust. Handlers return domain errors; the dispatcher owns the wire.
 
-`turul-rpc` is the generic RPC core extracted from the
-[turul-mcp-framework](https://github.com/aussierobots/turul-mcp-framework). It powers
-`turul-mcp` but knows nothing about MCP, and is usable on its own.
+`turul-rpc` is a generic, transport-agnostic JSON-RPC 2.0 framework for Rust.
+You get spec-conformant wire types and an async dispatcher; you bring the
+transport. Handlers return your own error type and the dispatcher owns the
+conversion to the wire.
 
 ## Crate layout
 
@@ -27,6 +28,26 @@ Most JSON-RPC crates either hand you raw envelopes or hide the wire entirely.
 3. **Transport-agnostic.** Bring your own HTTP/SSE/stdio/Lambda. The crate is pure dispatch and types.
 4. **JSON-RPC 2.0 batch** is implemented and tested per spec (§6).
 
+## Core types
+
+The wire model is a small set of enums you compose directly:
+
+| Type | Shape | Role |
+|---|---|---|
+| `RequestId` | `String \| Number(i64) \| Null` | request/response id (§4.2) |
+| `ResponseResult` | `Success(Value) \| Null` | the `result` payload of a success response |
+| `JsonRpcResponse` | `Success(JsonRpcSuccessResponse) \| Error(JsonRpcError)` | the §5 Response object union |
+| `JsonRpcMessage` | `Request \| Notification` | what a **server** reads off the wire |
+| `JsonRpcWireMessage` | `Request \| Notification \| Response` | what a **client or peer** reads — the schema's `JSONRPCMessage` |
+
+`JsonRpcMessage` is the inbound subset; `JsonRpcWireMessage` is the full
+bidirectional union, its `Response` arm carrying the success-or-error
+`JsonRpcResponse`. Parse incoming bytes with `parse_json_rpc_message` (server
+side) or `parse_json_rpc_wire_message` (any peer that reads responses) — both
+validate structure and reject malformed ids per spec rather than guessing via
+untagged deserialization. `JsonRpcRequest` and `JsonRpcNotification` are the
+matching outbound shapes.
+
 ## Compliance posture
 
 `turul-rpc` implements JSON-RPC 2.0 id handling per §4.2: incoming
@@ -39,6 +60,8 @@ the spec requires. See
 [ADR-002](docs/adr/002-json-rpc-2-compliance.md) for the full posture.
 
 ## Quick start
+
+Define a handler — it returns your own error type, never a `JsonRpcError`:
 
 ```rust
 use turul_rpc::{JsonRpcDispatcher, JsonRpcHandler, RequestParams, SessionContext};
@@ -91,16 +114,67 @@ impl JsonRpcHandler for Calc {
 }
 ```
 
-## Relationship to turul-mcp
+Register it on a dispatcher and hand it a request — you get back a
+`JsonRpcResponse` (the §5 `Success | Error` union):
 
-`turul-mcp-server` is built on top of `turul-rpc`. If you want MCP semantics
-(tools, resources, prompts, sessions, the Inspector flow), reach for
-[`turul-mcp-server`](https://crates.io/crates/turul-mcp-server) — it pulls
-`turul-rpc` in transitively.
+```rust
+use turul_rpc::{JsonRpcDispatcher, JsonRpcRequest, JsonRpcResponse, RequestId};
+use serde_json::json;
+use std::collections::HashMap;
 
-For existing 0.3.x users of `turul-mcp-json-rpc-server`: nothing to do. That
-crate ships as a thin re-export shim over `turul-rpc` from
-turul-mcp-framework 0.3.39 onward. See [ADR-003](docs/adr/003-compatibility-with-turul-mcp-json-rpc-server.md).
+async fn run() {
+    let mut dispatcher: JsonRpcDispatcher<CalcError> = JsonRpcDispatcher::new();
+    dispatcher.register_method("add".into(), Calc);
+
+    let req = JsonRpcRequest::new_with_object_params(
+        RequestId::Number(1),
+        "add".into(),
+        HashMap::from([("a".into(), json!(2)), ("b".into(), json!(3))]),
+    );
+
+    match dispatcher.handle_request(req).await {
+        JsonRpcResponse::Success(ok) => println!("result: {:?}", ok.result.as_value()),
+        JsonRpcResponse::Error(err)  => eprintln!("error {}: {}", err.error.code, err.error.message),
+    }
+
+    // Or feed a raw batch/single body straight in; returns the response
+    // JSON string, or None for an all-notifications body.
+    let _: Option<String> =
+        dispatcher.handle_batch(r#"{"jsonrpc":"2.0","id":2,"method":"add","params":{"a":1,"b":1}}"#).await;
+}
+```
+
+If you're below the dispatcher — parsing wire bytes or building responses
+by hand — use the message helpers:
+
+```rust
+use turul_rpc::{JsonRpcWireMessage, parse_json_rpc_wire_message, RequestId};
+use turul_rpc::dispatch::{create_success_response, create_error_response};
+use serde_json::json;
+
+// Classify whatever a peer sent: request, notification, or response.
+match parse_json_rpc_wire_message(r#"{"jsonrpc":"2.0","id":1,"result":{"sum":5}}"#).unwrap() {
+    JsonRpcWireMessage::Request(req)       => { /* dispatch it */ }
+    JsonRpcWireMessage::Notification(note) => { /* fire-and-forget */ }
+    JsonRpcWireMessage::Response(resp)     => { /* correlate to a request you sent */ }
+}
+
+// Build a ready-to-serialize result without a dispatcher.
+let ok  = create_success_response(RequestId::Number(1), json!({ "sum": 5 }));
+let err = create_error_response(Some(RequestId::Number(2)), -32601, "method not found");
+let body: Option<String> = ok.to_json_string();
+```
+
+(Use `parse_json_rpc_message` instead of `parse_json_rpc_wire_message` when you
+only ever receive requests/notifications — a server that never reads responses.)
+
+## Ecosystem
+
+`turul-rpc` is the JSON-RPC layer beneath
+[`turul-mcp-server`](https://crates.io/crates/turul-mcp-server) — reach for that
+crate if you want MCP semantics. The `turul-mcp-json-rpc-server` (0.3.x) shim
+re-exports `turul-rpc`, so existing consumers keep working; new code should
+depend on `turul-rpc` directly ([ADR-003](docs/adr/003-compatibility-with-turul-mcp-json-rpc-server.md)).
 
 ## Architecture decisions
 

@@ -85,21 +85,25 @@ cargo run -p turul-rpc --example in_process_round_trip  # client+server pattern
 
 `in_process_round_trip` shows the calling pattern — id generation,
 request construction, serialization, dispatch, response parsing, and
-id correlation — using only the crate's existing types. It is the
-template a future `turul-rpc-client` crate would build on; for v0.1
-the pattern itself is enough.
+id correlation. For peers that read messages off the wire,
+`JsonRpcWireMessage` (the schema's `JSONRPCMessage` union) parses any
+inbound request, notification, or response via
+`parse_json_rpc_wire_message`. There is no dedicated client crate; these
+pieces cover the in-process and bring-your-own-transport cases (see
+[ADR-004]).
 
 ## Compliance posture
 
-JSON-RPC 2.0 with **one documented departure**: incoming requests with
-`"id": null` are rejected as Invalid Request (`-32600`). The spec
-permits null id but discourages it; this crate takes the strict line at
-the type level. Server-emitted error responses correctly use `id: null`
-for unparseable / unidentifiable requests as the spec requires. See
-[ADR-002] for the v0.2 plan to add a permissive codec-level type for
-callers who need to accept null-id requests.
+JSON-RPC 2.0, fully spec-conformant on id handling. Incoming requests
+with `"id": null` are **accepted** per §4.2 (permitted, though the spec
+discourages them); `RequestId` is `String | Number | Null`. The only
+narrowing is that fractional numeric ids are rejected — only `i64` is
+representable. Server-emitted error responses use `id: null` for
+unparseable or unidentifiable requests, as the spec requires. Batch
+(§6) is implemented and tested. See [ADR-002] for the full posture.
 
 [ADR-002]: https://github.com/aussierobots/turul-rpc/blob/main/docs/adr/002-json-rpc-2-compliance.md
+[ADR-004]: https://github.com/aussierobots/turul-rpc/blob/main/docs/adr/004-non-goals-for-v0-1.md
 
 ## Relationship to turul-mcp
 
@@ -108,9 +112,9 @@ on top of `turul-rpc`. If you want MCP semantics (tools, resources,
 prompts, sessions, the Inspector flow), reach for `turul-mcp-server`
 directly — it pulls `turul-rpc` in transitively.
 
-For existing 0.3.x users of `turul-mcp-json-rpc-server`: **nothing to
-do**. That crate ships as a thin re-export shim over `turul-rpc 0.1`
-from turul-mcp-framework 0.3.39 onward. See [ADR-003].
+`turul-mcp-json-rpc-server` (0.3.x) is a thin re-export shim over this
+crate, so existing consumers resolve the same paths through it. New code
+should depend on `turul-rpc` directly. See [ADR-003].
 
 [ADR-003]: https://github.com/aussierobots/turul-rpc/blob/main/docs/adr/003-compatibility-with-turul-mcp-json-rpc-server.md
 

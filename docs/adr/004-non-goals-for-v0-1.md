@@ -70,3 +70,16 @@ spec gap in the original (per ADR-002).
 - 2026-05-10: Revised — explicitly INCLUDE batch in v0.1 (was previously
   marked "deferred"). Compliance is a v0.1 success criterion per ADR-002,
   and shipping without batch would be false advertising.
+- 2026-05-25 (0.2.2): Added the bidirectional wire-message union
+  `JsonRpcWireMessage` (`Request | Notification | Response`) — the schema's
+  `JSONRPCMessage` — plus the validating `parse_json_rpc_wire_message`. This
+  is the first concrete piece of the deferred client surface (above): real
+  demand materialised (`turul-mcp-protocol` needs to read inbound responses,
+  which the server-only `JsonRpcMessage` cannot represent). It is a generic
+  JSON-RPC wire type, not client orchestration — there is still **no
+  `turul-rpc-client` crate**; request-id generation and request/response
+  correlation remain deferred until that surface is designed. The new items
+  live in `turul-rpc-jsonrpc::frame` (not a shim-re-exported module), so the
+  `turul-mcp-json-rpc-server` shim surface is unchanged per ADR-003. Named
+  `JsonRpcWireMessage` to avoid colliding with both the inbound
+  `JsonRpcMessage` and the streaming `JsonRpcFrame`; no breaking renames.

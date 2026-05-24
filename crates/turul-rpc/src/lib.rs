@@ -50,6 +50,11 @@ pub use types::{JsonRpcVersion, RequestId};
 /// Incoming message union (request | notification) produced by the parser.
 pub use turul_rpc_jsonrpc::JsonRpcMessage;
 
+/// Bidirectional wire-message union (request | notification | response) — the
+/// schema's `JSONRPCMessage`. Superset of [`JsonRpcMessage`]; for clients and
+/// peers that read responses. Parse with [`parse_json_rpc_wire_message`].
+pub use turul_rpc_jsonrpc::frame::{JsonRpcWireMessage, parse_json_rpc_wire_message};
+
 #[cfg(feature = "async")]
 pub use turul_rpc_server::{JsonRpcDispatcher, JsonRpcHandler, SessionContext};
 

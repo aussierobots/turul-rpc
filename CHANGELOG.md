@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-05-25
+
+### Added
+
+- `JsonRpcWireMessage` — the bidirectional wire-message union
+  (`Request | Notification | Response`), i.e. the JSON-RPC 2.0 / MCP schema
+  `JSONRPCMessage`: any single message a peer reads off the wire without
+  knowing direction. Superset of the inbound `JsonRpcMessage`
+  (request | notification); the `Response` arm carries the §5
+  `JsonRpcResponse` union (success or error). For clients and bidirectional
+  peers that need to parse responses.
+- `parse_json_rpc_wire_message` — validating parser for the above. Classifies
+  by validated structure (version check, fractional-id rejection) rather than
+  a naive `#[serde(untagged)]` derive, which would silently misclassify a
+  malformed-id request as a notification. Lives in `turul-rpc-jsonrpc::frame`
+  and is re-exported at the `turul-rpc` facade root; it is **not** surfaced
+  through the `turul-mcp-json-rpc-server` shim. See ADR-003, ADR-004.
+
 ## [0.2.1] - 2026-05-24
 
 ### Added
