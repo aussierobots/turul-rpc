@@ -32,6 +32,18 @@ impl From<i64> for RequestId {
     }
 }
 
+impl From<i32> for RequestId {
+    fn from(n: i32) -> Self {
+        RequestId::Number(i64::from(n))
+    }
+}
+
+impl From<u32> for RequestId {
+    fn from(n: u32) -> Self {
+        RequestId::Number(i64::from(n))
+    }
+}
+
 impl From<&str> for RequestId {
     fn from(s: &str) -> Self {
         RequestId::String(s.to_string())
@@ -134,6 +146,21 @@ mod tests {
         assert_eq!(s, RequestId::String("abc".into()));
         let n: RequestId = serde_json::from_str("7").unwrap();
         assert_eq!(n, RequestId::Number(7));
+    }
+
+    #[test]
+    fn request_id_from_integer_types() {
+        // i32/u32 literals convert without an explicit i64 suffix.
+        assert_eq!(RequestId::from(1_i32), RequestId::Number(1));
+        assert_eq!(RequestId::from(1_u32), RequestId::Number(1));
+        assert_eq!(RequestId::from(-5_i32), RequestId::Number(-5));
+        assert_eq!(
+            RequestId::from(u32::MAX),
+            RequestId::Number(i64::from(u32::MAX))
+        );
+        // .into() at a call site infers RequestId.
+        let id: RequestId = 42_i32.into();
+        assert_eq!(id, RequestId::Number(42));
     }
 
     #[test]
