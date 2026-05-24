@@ -55,11 +55,12 @@ fn accepts_zero_id() {
 }
 
 #[test]
-fn rejects_null_id_per_strict_posture() {
-    // ADR-002: turul-rpc rejects null id at the parser. JSON-RPC 2.0 permits
-    // it but discourages it; we are strict.
-    let r = parse_json_rpc_message(r#"{"jsonrpc":"2.0","method":"x","id":null}"#).unwrap_err();
-    assert_eq!(r.error.code, INVALID_REQUEST);
+fn accepts_null_id() {
+    // ADR-002 (rev 2026-05-24): null id is accepted per §4.2 (permitted,
+    // though discouraged). It parses to a request with RequestId::Null.
+    let m = parse_json_rpc_message(r#"{"jsonrpc":"2.0","method":"x","id":null}"#).unwrap();
+    assert!(m.is_request());
+    assert_eq!(m.request_id(), Some(&RequestId::Null));
 }
 
 #[test]

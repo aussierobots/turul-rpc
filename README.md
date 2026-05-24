@@ -29,15 +29,14 @@ Most JSON-RPC crates either hand you raw envelopes or hide the wire entirely.
 
 ## Compliance posture
 
-`turul-rpc 0.1` implements JSON-RPC 2.0 with **one documented departure**:
-incoming requests with `"id": null` are rejected as `Invalid Request`
-(`-32600`). The spec permits null ids but discourages them; this crate
-takes the strict line at the type level (`RequestId = {String, Number}`).
-Server-emitted error responses correctly use `id: null` for unparseable
-or unidentifiable requests as the spec requires. See
-[ADR-002](docs/adr/002-json-rpc-2-compliance.md) for full rationale and
-the v0.2 plan to surface a permissive codec-level type for callers who
-need to accept null-id requests.
+`turul-rpc` implements JSON-RPC 2.0 id handling per §4.2: incoming
+requests with `"id": null` are **accepted** (`RequestId = {String, Number,
+Null}`); null ids are permitted by the spec though discouraged. The only
+narrowing is that fractional numeric ids are rejected (the spec itself
+SHOULD-NOTs them; only `i64` is representable). Server-emitted error
+responses use `id: null` for unparseable or unidentifiable requests as
+the spec requires. See
+[ADR-002](docs/adr/002-json-rpc-2-compliance.md) for the full posture.
 
 ## Quick start
 

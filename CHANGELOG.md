@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - Unreleased
+## [0.2.0] - 2026-05-24
+
+### Changed (breaking)
+
+- `JsonRpcResponse` is now the JSON-RPC 2.0 §5 Response object **union**
+  (`Success(JsonRpcSuccessResponse) | Error(JsonRpcError)`). The previous
+  success-only struct is renamed `JsonRpcSuccessResponse`. `JsonRpcError`
+  and `JsonRpcErrorObject` are unchanged; parser types `JsonRpcMessage`
+  and `JsonRpcMessageResult` are unchanged.
+- `RequestId` gains a `Null` variant. This is breaking for exhaustive
+  `match` on `RequestId`.
+
+### Fixed
+
+- Incoming `"id": null` requests are now accepted per JSON-RPC 2.0 §4.2
+  (previously rejected as Invalid Request — the ADR-002 strict-id
+  departure). Fractional numeric ids remain rejected. See ADR-002.
+
+### Migration
+
+- `JsonRpcResponse { .. }` struct literals → `JsonRpcSuccessResponse { .. }`;
+  the `JsonRpcResponse::success`/`null` struct constructors are now on
+  `JsonRpcSuccessResponse`. The union `JsonRpcResponse` exposes
+  `success(..)`, `error(..)`, `is_error()`, `id()` and variants
+  `Success`/`Error`.
+- Add a `RequestId::Null` arm to exhaustive matches on `RequestId`.
+
+## [0.1.0] - 2026-05-10
 
 ### Added
 

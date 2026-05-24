@@ -7,7 +7,7 @@
 pub use crate::error::{JsonRpcError, JsonRpcErrorCode};
 pub use crate::notification::JsonRpcNotification;
 pub use crate::request::{JsonRpcRequest, RequestParams};
-pub use crate::response::{JsonRpcMessage, JsonRpcResponse, ResponseResult};
+pub use crate::response::{JsonRpcResponse, JsonRpcSuccessResponse, ResponseResult};
 pub use crate::types::{JsonRpcVersion, RequestId};
 
 #[cfg(feature = "async")]

@@ -59,57 +59,45 @@ a compatibility shim that always returns a single-element vec for
 non-array bodies and the parsed batch entries for array bodies. It is
 deprecated in favour of `parse_json_rpc_batch`.
 
-### Request id rules — one documented departure from full compliance
+### Request id rules
 
 JSON-RPC 2.0 ([Section 4.2 — id][spec-id]) allows `String`, `Number`, or
 `Null`. Null is **discouraged** for client-to-server requests and
 reserved for server responses to unparseable requests.
 
-`turul-rpc-core::RequestId = enum { String(String), Number(i64) }`.
+`turul-rpc-core::RequestId = enum { String(String), Number(i64), Null }`.
 
-**Compliance posture summary**: spec-compliant on the response side;
-**stricter than spec** on the request side. README, CHANGELOG and crate
-docs say "JSON-RPC 2.0 compliant with documented strict-id posture (see
-ADR-002)" — they MUST NOT claim full compliance unqualified.
+**Compliance posture summary**: spec-compliant on both request and
+response id handling. Null ids are accepted; the only narrowing is that
+fractional numeric ids are rejected (which the spec itself SHOULD-NOTs).
 
-- **Outgoing requests** (constructed via `JsonRpcRequest::new`) cannot
-  carry a null id at the type level. Stricter than the permissive spec
-  posture; matches the universal client convention; preserved verbatim
-  from `turul-mcp-json-rpc-server 0.3.x` for type identity (ADR-003).
-- **Incoming requests** with `"id": null` are rejected as `Invalid
-  Request` (`-32600`) at the parser. **This is technically non-compliant**
-  with §4.2 — the spec permits null id with a SHOULD-NOT-USE note, not a
-  MUST-NOT. A test asserts the rejection (`rejects_null_id_per_strict_posture`).
+- **Incoming requests** with `"id": null` are **accepted** and parse to
+  `RequestId::Null` (§4.2 permits null, discouraged). A test asserts this
+  (`accepts_null_id`).
+- **Outgoing requests** MAY carry a null id at the type level
+  (`RequestId::Null`), though it remains discouraged and is useless for
+  response correlation.
 - **Outgoing error responses** for unparseable / unidentifiable requests
   emit `"id": null` via `JsonRpcError { id: Option<RequestId>, ... }`
   where `id` is `None`. Spec-required behaviour; constructors
   `JsonRpcError::parse_error()` and `JsonRpcError::invalid_request(None)`
   implement it. A test asserts the wire shape
-  (`parse_error_response_serializes_with_null_id`).
+  (`parse_error_response_serializes_with_null_id`). Note: `None` and
+  `Some(RequestId::Null)` both serialize to `null`; `None` is the
+  canonical "id could not be determined", `Some(Null)` is "the client
+  explicitly sent null".
 - **Fractional numeric ids** (e.g. `1.5`) are rejected as `Invalid
   Request`. JSON-RPC 2.0 SHOULD-NOT for fractional parts; this is
   enforced at the type level (`as_i64()` only).
 
-#### v0.2 plan for permissive incoming-id handling
+#### Resolution (0.2.0)
 
-If a caller needs spec-permissive null-id incoming requests, v0.2 will
-introduce a separate codec-level `WireRequestId` (or
-`WireMessage::RequestWithNullId`) at the parser boundary, leaving
-`RequestId` itself unchanged for type-identity reasons. v0.1 ships
-strict-by-construction because:
-
-1. The strict posture is **inherited from `turul-mcp-json-rpc-server
-   0.3.x`** — relaxing it in the shim release would be a behaviour change,
-   defeating the shim's preservation purpose (ADR-003).
-2. No real-world JSON-RPC 2.0 client is known to send null id in a
-   request; the wire format would be a useless request (server cannot
-   correlate a response to it).
-3. Designing the permissive surface properly takes more thought than fits
-   in the v0.1 extraction slice — a `WireRequestId` would touch the
-   `JsonRpcRequest`, the parser return type, and the dispatcher's
-   id-extraction code.
-
-The relaxation is a v0.2 candidate and explicitly listed in ADR-004.
+Implemented in 0.2.0 by adding `RequestId::Null` **directly**, not the
+separate codec-level `WireRequestId` this ADR originally proposed. That
+indirect approach existed only to avoid changing `RequestId` while the
+`turul-mcp-json-rpc-server 0.3.x` shim required type identity (ADR-003).
+That shim-preservation constraint is retired, so the direct variant is
+simpler and needs no parallel codec type.
 
 ### Standard error codes
 
@@ -167,16 +155,15 @@ remains spec-complete on its own.
   compliance, opens the spec, and finds the implementation matches each
   numbered section. No "almost compliant" footnotes.
 - Batch is no longer an unimplemented stub with a misleading comment.
-- The strict-id posture preserves type identity with the 0.3.x shim
-  (ADR-003) without conceding spec correctness on the response side
-  (where null id IS supported).
+- Null request ids are accepted (§4.2), so the id handling is fully
+  spec-conformant on both directions; the only narrowing is fractional
+  numeric ids, which the spec itself SHOULD-NOTs.
 
 **Negative**
 
-- The strict request-side null-id rejection technically narrows the spec.
-  Documented above; if it ever becomes an interop problem, the v0.2
-  workaround (separate `WireRequestId` for the codec layer) is on the
-  table.
+- Accepting null ids means a client *can* send a request the server
+  cannot correlate a response to. This is spec-permitted but discouraged;
+  callers should prefer String or Number ids.
 
 ## References
 
@@ -186,3 +173,8 @@ remains spec-complete on its own.
 ## Revision log
 
 - 2026-05-10: Initial proposal accepted.
+- 2026-05-24: Strict-id departure resolved. `RequestId` gains a `Null`
+  variant; incoming null id is accepted (§4.2). Chosen over the
+  `WireRequestId` approach this ADR originally proposed because the
+  shim-preservation constraint (ADR-003) is retired. Test renamed
+  `rejects_null_id_per_strict_posture` → `accepts_null_id`.

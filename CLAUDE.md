@@ -61,17 +61,12 @@ Such additions MUST be listed in the framework `CHANGELOG.md` under
 `### Added` with an explicit acknowledgement that they are reachable
 through the shim. See ADR-003.
 
-### JSON-RPC 2.0 strict-id posture (ADR-002)
+### JSON-RPC 2.0 id posture (ADR-002)
 
-`RequestId = enum { String(String), Number(i64) }` — null is rejected at
-the parser. This is **stricter than the spec** (which permits null with
-discouragement). The strict posture is inherited verbatim from
-v0.3.38; relaxing it would be a behaviour change in the shim. The README
-and ADR-002 are explicit about this departure; do NOT claim full
-JSON-RPC 2.0 compliance unqualified.
-
-A v0.2 candidate is to introduce a permissive codec-level `WireRequestId`
-at the parser boundary, leaving `RequestId` itself unchanged.
+`RequestId = enum { String(String), Number(i64), Null }` — incoming
+`"id": null` is **accepted** per §4.2 (permitted, discouraged). Fractional
+numeric ids are still rejected (only `i64` is representable). Id handling
+is fully spec-conformant on both directions; see ADR-002 (rev 2026-05-24).
 
 ### v0.1 non-goals (ADR-004)
 

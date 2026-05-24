@@ -9,16 +9,12 @@ use serde_json::Value;
 use turul_rpc_core::error::JsonRpcError;
 use turul_rpc_core::notification::JsonRpcNotification;
 use turul_rpc_core::request::JsonRpcRequest;
-use turul_rpc_core::response::JsonRpcResponse;
+use turul_rpc_core::response::JsonRpcSuccessResponse;
 use turul_rpc_core::types::RequestId;
 
-/// Enum representing different types of inbound JSON-RPC messages.
-///
-/// Note: this is the **incoming** message union (request | notification).
-/// The **outgoing** message union (response | error) lives in
-/// [`turul_rpc_core::response::JsonRpcMessage`]. Both names exist for
-/// historical compatibility with `turul-mcp-json-rpc-server 0.3.x`; new
-/// code should disambiguate via the qualified path.
+/// Enum representing the inbound JSON-RPC messages a server parses:
+/// a request or a notification. Responses are produced, not parsed here,
+/// and live in [`turul_rpc_core::response::JsonRpcResponse`].
 #[derive(Debug, Clone)]
 pub enum JsonRpcMessage {
     Request(JsonRpcRequest),
@@ -28,11 +24,11 @@ pub enum JsonRpcMessage {
 /// Result of parsing and processing a JSON-RPC message.
 #[derive(Debug, Clone)]
 pub enum JsonRpcMessageResult {
-    /// A response to a request
-    Response(JsonRpcResponse),
-    /// An error response
+    /// A successful response to a request.
+    Response(JsonRpcSuccessResponse),
+    /// An error response.
     Error(JsonRpcError),
-    /// No response needed (for notifications)
+    /// No response needed (for notifications).
     NoResponse,
 }
 
@@ -91,10 +87,8 @@ fn parse_json_rpc_value(value: Value) -> Result<JsonRpcMessage, JsonRpcError> {
 
     // Check if it has an ID (request) or not (notification)
     if obj.contains_key("id") {
-        // Reject explicit null id at the parser per ADR-002 (strict posture).
-        if matches!(obj.get("id"), Some(Value::Null)) {
-            return Err(JsonRpcError::invalid_request(None));
-        }
+        // `"id": null` is accepted per §4.2 (permitted, discouraged) and
+        // parses to RequestId::Null. See ADR-002 (rev 2026-05-24).
         // Reject fractional numeric ids (no `as_i64()`).
         if let Some(Value::Number(n)) = obj.get("id")
             && n.as_i64().is_none()
@@ -115,6 +109,7 @@ fn extract_id(obj: &serde_json::Map<String, Value>) -> Option<RequestId> {
     obj.get("id").and_then(|v| match v {
         Value::String(s) => Some(RequestId::String(s.clone())),
         Value::Number(n) => n.as_i64().map(RequestId::Number),
+        Value::Null => Some(RequestId::Null),
         _ => None,
     })
 }
@@ -144,7 +139,7 @@ pub(crate) fn parse_value_into_message(value: Value) -> Result<JsonRpcMessage, J
 
 /// Create a simple success response.
 pub fn create_success_response(id: RequestId, result: Value) -> JsonRpcMessageResult {
-    JsonRpcMessageResult::Response(JsonRpcResponse::success(id, result))
+    JsonRpcMessageResult::Response(JsonRpcSuccessResponse::success(id, result))
 }
 
 /// Create a simple error response.

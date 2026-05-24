@@ -41,10 +41,14 @@ pub use error::{JsonRpcError, JsonRpcErrorCode};
 pub use notification::JsonRpcNotification;
 /// JSON-RPC request structure with method and parameters.
 pub use request::{JsonRpcRequest, RequestParams};
-/// JSON-RPC response types including success and error variants.
-pub use response::{JsonRpcMessage, JsonRpcResponse, ResponseResult};
+/// JSON-RPC response types: the §5 Response object union (`JsonRpcResponse`)
+/// and the success-only struct (`JsonRpcSuccessResponse`).
+pub use response::{JsonRpcResponse, JsonRpcSuccessResponse, ResponseResult};
 /// Core JSON-RPC types for version and request identification.
 pub use types::{JsonRpcVersion, RequestId};
+
+/// Incoming message union (request | notification) produced by the parser.
+pub use turul_rpc_jsonrpc::JsonRpcMessage;
 
 #[cfg(feature = "async")]
 pub use turul_rpc_server::{JsonRpcDispatcher, JsonRpcHandler, SessionContext};

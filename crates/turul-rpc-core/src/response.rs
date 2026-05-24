@@ -51,16 +51,17 @@ impl From<()> for ResponseResult {
     }
 }
 
-/// A successful JSON-RPC response
+/// A successful JSON-RPC response object (JSON-RPC 2.0 §5, success case):
+/// `{jsonrpc, id, result}`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcResponse {
+pub struct JsonRpcSuccessResponse {
     #[serde(rename = "jsonrpc")]
     pub version: JsonRpcVersion,
     pub id: RequestId,
     pub result: ResponseResult,
 }
 
-impl JsonRpcResponse {
+impl JsonRpcSuccessResponse {
     pub fn new(id: RequestId, result: ResponseResult) -> Self {
         Self {
             version: JsonRpcVersion::V2_0,
@@ -78,7 +79,7 @@ impl JsonRpcResponse {
     }
 }
 
-impl<T> From<(RequestId, T)> for JsonRpcResponse
+impl<T> From<(RequestId, T)> for JsonRpcSuccessResponse
 where
     T: Into<ResponseResult>,
 {
@@ -87,103 +88,137 @@ where
     }
 }
 
-/// Union type that represents either a successful response or an error response.
-/// This ensures JSON-RPC 2.0 compliance by keeping success and error responses separate.
+/// A JSON-RPC Response object (JSON-RPC 2.0 §5): success XOR error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum JsonRpcMessage {
-    /// Successful response with result field
-    Response(JsonRpcResponse),
-    /// Error response with error field
+pub enum JsonRpcResponse {
+    /// Successful response carrying a `result`.
+    Success(JsonRpcSuccessResponse),
+    /// Error response carrying an `error`.
     Error(JsonRpcError),
 }
 
-impl JsonRpcMessage {
-    /// Create a success message
+impl JsonRpcResponse {
+    /// Build a success response.
     pub fn success(id: RequestId, result: ResponseResult) -> Self {
-        Self::Response(JsonRpcResponse::new(id, result))
+        Self::Success(JsonRpcSuccessResponse::new(id, result))
     }
 
-    /// Create an error message
+    /// Build an error response.
     pub fn error(error: JsonRpcError) -> Self {
         Self::Error(error)
     }
 
-    /// Check if this is an error response
+    /// True if this is the error variant.
     pub fn is_error(&self) -> bool {
-        matches!(self, JsonRpcMessage::Error(_))
+        matches!(self, JsonRpcResponse::Error(_))
     }
 
-    /// Get the request ID from either response or error
+    /// The request id this response correlates to, if present.
     pub fn id(&self) -> Option<&RequestId> {
         match self {
-            JsonRpcMessage::Response(resp) => Some(&resp.id),
-            JsonRpcMessage::Error(err) => err.id.as_ref(),
+            JsonRpcResponse::Success(r) => Some(&r.id),
+            JsonRpcResponse::Error(e) => e.id.as_ref(),
         }
     }
 }
 
-impl From<JsonRpcResponse> for JsonRpcMessage {
-    fn from(response: JsonRpcResponse) -> Self {
-        Self::Response(response)
+impl From<JsonRpcSuccessResponse> for JsonRpcResponse {
+    fn from(r: JsonRpcSuccessResponse) -> Self {
+        Self::Success(r)
     }
 }
 
-impl From<JsonRpcError> for JsonRpcMessage {
-    fn from(error: JsonRpcError) -> Self {
-        Self::Error(error)
+impl From<JsonRpcError> for JsonRpcResponse {
+    fn from(e: JsonRpcError) -> Self {
+        Self::Error(e)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{from_str, json, to_string};
+    use crate::error::{JsonRpcError, JsonRpcErrorObject};
+    use serde_json::{Value, from_str, json, to_string};
 
     #[test]
-    fn test_response_serialization() {
-        let response = JsonRpcResponse::success(RequestId::Number(1), json!({"result": "success"}));
-
-        let json_str = to_string(&response).unwrap();
-        let parsed: JsonRpcResponse = from_str(&json_str).unwrap();
-
-        assert_eq!(parsed.id, RequestId::Number(1));
-        assert!(matches!(parsed.result, ResponseResult::Success(_)));
+    fn success_response_serializes_with_result_no_error() {
+        let r = JsonRpcSuccessResponse::success(RequestId::Number(1), json!({"ok": true}));
+        let v: Value = serde_json::to_value(&r).unwrap();
+        assert_eq!(v["jsonrpc"], "2.0");
+        assert_eq!(v["id"], 1);
+        assert!(v.get("result").is_some());
+        assert!(v.get("error").is_none());
     }
 
     #[test]
-    fn test_null_response() {
-        let response = JsonRpcResponse::null(RequestId::String("test".to_string()));
+    fn response_union_serializes_success_shape() {
+        let r = JsonRpcResponse::success(
+            RequestId::Number(1),
+            ResponseResult::Success(json!({"ok": true})),
+        );
+        let v: Value = serde_json::to_value(&r).unwrap();
+        assert!(v.get("result").is_some());
+        assert!(v.get("error").is_none());
+        assert!(!r.is_error());
+    }
 
-        let json_str = to_string(&response).unwrap();
-        let parsed: JsonRpcResponse = from_str(&json_str).unwrap();
+    #[test]
+    fn response_union_serializes_error_shape() {
+        let err = JsonRpcError::new(
+            Some(RequestId::Number(7)),
+            JsonRpcErrorObject {
+                code: -32601,
+                message: "Method not found".into(),
+                data: None,
+            },
+        );
+        let r = JsonRpcResponse::error(err);
+        let v: Value = serde_json::to_value(&r).unwrap();
+        assert!(v.get("error").is_some());
+        assert!(v.get("result").is_none());
+        assert!(r.is_error());
+        assert_eq!(r.id(), Some(&RequestId::Number(7)));
+    }
 
-        assert_eq!(parsed.id, RequestId::String("test".to_string()));
-        // The issue is that serde(untagged) causes null to deserialize as Success(null)
-        // instead of Null variant. This is expected behavior.
+    #[test]
+    fn response_union_deserializes_both_shapes() {
+        let ok: JsonRpcResponse = from_str(r#"{"jsonrpc":"2.0","id":1,"result":{"a":1}}"#).unwrap();
+        assert!(matches!(ok, JsonRpcResponse::Success(_)));
+        let err: JsonRpcResponse =
+            from_str(r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"x"}}"#).unwrap();
+        assert!(matches!(err, JsonRpcResponse::Error(_)));
+    }
+
+    #[test]
+    fn success_response_round_trip_and_null() {
+        let r = JsonRpcSuccessResponse::null(RequestId::String("t".into()));
+        let s = to_string(&r).unwrap();
+        let parsed: JsonRpcSuccessResponse = from_str(&s).unwrap();
+        assert_eq!(parsed.id, RequestId::String("t".into()));
         match parsed.result {
             ResponseResult::Success(ref val) if val.is_null() => {}
             ResponseResult::Null => {}
-            _ => panic!("Expected null result, got: {:?}", parsed.result),
+            _ => panic!("expected null-ish result, got {:?}", parsed.result),
         }
     }
 
     #[test]
-    fn test_response_result_conversion() {
-        let value_result: ResponseResult = json!({"data": 42}).into();
-        assert!(matches!(value_result, ResponseResult::Success(_)));
-
-        let null_result: ResponseResult = json!(null).into();
-        assert!(matches!(null_result, ResponseResult::Null));
-
-        let void_result: ResponseResult = ().into();
-        assert!(matches!(void_result, ResponseResult::Null));
+    fn success_response_from_tuple() {
+        let r: JsonRpcSuccessResponse = (RequestId::Number(1), json!({"x": true})).into();
+        assert_eq!(r.id, RequestId::Number(1));
     }
 
     #[test]
-    fn test_response_from_tuple() {
-        let response: JsonRpcResponse = (RequestId::Number(1), json!({"test": true})).into();
-        assert_eq!(response.id, RequestId::Number(1));
-        assert!(matches!(response.result, ResponseResult::Success(_)));
+    fn response_result_conversion() {
+        assert!(matches!(
+            ResponseResult::from(json!({"d": 42})),
+            ResponseResult::Success(_)
+        ));
+        assert!(matches!(
+            ResponseResult::from(json!(null)),
+            ResponseResult::Null
+        ));
+        assert!(matches!(ResponseResult::from(()), ResponseResult::Null));
     }
 }

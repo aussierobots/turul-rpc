@@ -6,9 +6,9 @@ use serde_json::Value;
 use turul_rpc_core::error::JsonRpcError;
 use turul_rpc_core::notification::JsonRpcNotification;
 use turul_rpc_core::request::JsonRpcRequest;
-use turul_rpc_core::response::{JsonRpcMessage, ResponseResult};
+use turul_rpc_core::response::{JsonRpcResponse, ResponseResult};
 use turul_rpc_jsonrpc::batch::{BatchOrSingle, parse_json_rpc_batch};
-use turul_rpc_jsonrpc::{JsonRpcMessage as IncomingMessage, JsonRpcMessageResult};
+use turul_rpc_jsonrpc::{JsonRpcMessage, JsonRpcMessageResult};
 
 use crate::handler::{JsonRpcHandler, ToJsonRpcError};
 use crate::session::SessionContext;
@@ -65,7 +65,7 @@ where
         &self,
         request: JsonRpcRequest,
         session_context: SessionContext,
-    ) -> JsonRpcMessage {
+    ) -> JsonRpcResponse {
         let handler = self
             .handlers
             .get(&request.method)
@@ -78,24 +78,24 @@ where
                     .await
                 {
                     Ok(result) => {
-                        JsonRpcMessage::success(request.id, ResponseResult::Success(result))
+                        JsonRpcResponse::success(request.id, ResponseResult::Success(result))
                     }
                     Err(domain_error) => {
                         let error_object = domain_error.to_error_object();
                         let rpc_error = JsonRpcError::new(Some(request.id.clone()), error_object);
-                        JsonRpcMessage::error(rpc_error)
+                        JsonRpcResponse::error(rpc_error)
                     }
                 }
             }
             None => {
                 let error = JsonRpcError::method_not_found(request.id.clone(), &request.method);
-                JsonRpcMessage::error(error)
+                JsonRpcResponse::error(error)
             }
         }
     }
 
     /// Process a JSON-RPC request and return a response (no session context).
-    pub async fn handle_request(&self, request: JsonRpcRequest) -> JsonRpcMessage {
+    pub async fn handle_request(&self, request: JsonRpcRequest) -> JsonRpcResponse {
         let handler = self
             .handlers
             .get(&request.method)
@@ -103,16 +103,16 @@ where
 
         match handler {
             Some(handler) => match handler.handle(&request.method, request.params, None).await {
-                Ok(result) => JsonRpcMessage::success(request.id, ResponseResult::Success(result)),
+                Ok(result) => JsonRpcResponse::success(request.id, ResponseResult::Success(result)),
                 Err(domain_error) => {
                     let error_object = domain_error.to_error_object();
                     let rpc_error = JsonRpcError::new(Some(request.id.clone()), error_object);
-                    JsonRpcMessage::error(rpc_error)
+                    JsonRpcResponse::error(rpc_error)
                 }
             },
             None => {
                 let error = JsonRpcError::method_not_found(request.id.clone(), &request.method);
-                JsonRpcMessage::error(error)
+                JsonRpcResponse::error(error)
             }
         }
     }
@@ -200,15 +200,15 @@ where
 
     async fn dispatch_one(
         &self,
-        parsed: Result<IncomingMessage, JsonRpcError>,
+        parsed: Result<JsonRpcMessage, JsonRpcError>,
     ) -> JsonRpcMessageResult {
         match parsed {
             Err(e) => JsonRpcMessageResult::Error(e),
-            Ok(IncomingMessage::Request(req)) => match self.handle_request(req).await {
-                JsonRpcMessage::Response(r) => JsonRpcMessageResult::Response(r),
-                JsonRpcMessage::Error(e) => JsonRpcMessageResult::Error(e),
+            Ok(JsonRpcMessage::Request(req)) => match self.handle_request(req).await {
+                JsonRpcResponse::Success(r) => JsonRpcMessageResult::Response(r),
+                JsonRpcResponse::Error(e) => JsonRpcMessageResult::Error(e),
             },
-            Ok(IncomingMessage::Notification(notif)) => {
+            Ok(JsonRpcMessage::Notification(notif)) => {
                 let _ = self.handle_notification(notif).await;
                 JsonRpcMessageResult::NoResponse
             }

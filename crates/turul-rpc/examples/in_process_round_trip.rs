@@ -9,8 +9,8 @@
 //!   3. Serialize to JSON.
 //!   4. Hand the JSON to the server (here: in-process; in production: an
 //!      HTTP/SSE/stdio transport of your choice).
-//!   5. Parse the JSON response back into a `JsonRpcMessage` (response
-//!      union) or `JsonRpcError`.
+//!   5. Parse the JSON response back into a `JsonRpcResponse` (the §5
+//!      Response object union: success or error).
 //!   6. Correlate the response id back to the originating request id.
 //!
 //! ```text
@@ -22,10 +22,10 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use async_trait::async_trait;
 use serde_json::{Value, json};
 use turul_rpc::r#async::ToJsonRpcError;
-use turul_rpc::dispatch::{JsonRpcMessage as IncomingMessage, parse_json_rpc_message};
+use turul_rpc::dispatch::{JsonRpcMessage, parse_json_rpc_message};
 use turul_rpc::error::JsonRpcErrorObject;
 use turul_rpc::{
-    JsonRpcDispatcher, JsonRpcHandler, JsonRpcMessage, JsonRpcRequest, RequestId, RequestParams,
+    JsonRpcDispatcher, JsonRpcHandler, JsonRpcRequest, JsonRpcResponse, RequestId, RequestParams,
     SessionContext,
 };
 
@@ -128,8 +128,8 @@ async fn call_add(
         .ok_or_else(|| "no response (notification?)".to_string())?;
     println!("← response: {response_body}");
 
-    // (5) parse — JsonRpcMessage is the outbound union (Response | Error)
-    let response: JsonRpcMessage =
+    // (5) parse — JsonRpcResponse is the §5 Response object union (Success | Error)
+    let response: JsonRpcResponse =
         serde_json::from_str(&response_body).map_err(|e| e.to_string())?;
 
     // (6) correlate id
@@ -142,13 +142,15 @@ async fn call_add(
     }
 
     match response {
-        JsonRpcMessage::Response(r) => {
+        JsonRpcResponse::Success(r) => {
             let v = r.result.as_value().ok_or("null result")?;
             v.get("sum")
                 .and_then(Value::as_f64)
                 .ok_or_else(|| "missing sum".to_string())
         }
-        JsonRpcMessage::Error(e) => Err(format!("rpc error {}: {}", e.error.code, e.error.message)),
+        JsonRpcResponse::Error(e) => {
+            Err(format!("rpc error {}: {}", e.error.code, e.error.message))
+        }
     }
 }
 
@@ -162,8 +164,8 @@ fn parse_demo() {
     let wire = r#"{"jsonrpc":"2.0","method":"server_event","params":{"value":42}}"#;
     let parsed = parse_json_rpc_message(wire).expect("valid notification");
     match parsed {
-        IncomingMessage::Request(_) => unreachable!(),
-        IncomingMessage::Notification(n) => {
+        JsonRpcMessage::Request(_) => unreachable!(),
+        JsonRpcMessage::Notification(n) => {
             println!(
                 "\nparsed notification: method={} params={:?}",
                 n.method, n.params

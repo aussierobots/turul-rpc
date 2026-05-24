@@ -1,17 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// A uniquely identifying ID for a JSON-RPC request.
-/// Can be a string or a number, but never null.
+/// A uniquely identifying ID for a JSON-RPC request: a String, a Number,
+/// or Null.
 ///
-/// JSON-RPC 2.0 permits null ids for client→server requests but discourages
-/// them; `turul-rpc` enforces the stricter posture at the type level. See
-/// ADR-002 in the `turul-rpc` repository for rationale.
+/// JSON-RPC 2.0 §4.2 permits Null ids for client→server requests but
+/// discourages them; `turul-rpc` accepts Null. Fractional numeric ids are
+/// still rejected (only `i64` is representable). See ADR-002 in the
+/// `turul-rpc` repository for the compliance posture.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RequestId {
     String(String),
     Number(i64),
+    Null,
 }
 
 impl fmt::Display for RequestId {
@@ -19,6 +21,7 @@ impl fmt::Display for RequestId {
         match self {
             RequestId::String(s) => write!(f, "{}", s),
             RequestId::Number(n) => write!(f, "{}", n),
+            RequestId::Null => write!(f, "null"),
         }
     }
 }
@@ -114,6 +117,23 @@ mod tests {
 
         assert_eq!(serde_json::to_string(&id_str).unwrap(), r#""test""#);
         assert_eq!(serde_json::to_string(&id_num).unwrap(), "42");
+    }
+
+    #[test]
+    fn null_id_round_trips() {
+        let id = RequestId::Null;
+        assert_eq!(serde_json::to_string(&id).unwrap(), "null");
+        let back: RequestId = serde_json::from_str("null").unwrap();
+        assert_eq!(back, RequestId::Null);
+    }
+
+    #[test]
+    fn string_and_number_ids_still_win_over_null() {
+        // Ordering guard: concrete values must not deserialize as Null.
+        let s: RequestId = serde_json::from_str(r#""abc""#).unwrap();
+        assert_eq!(s, RequestId::String("abc".into()));
+        let n: RequestId = serde_json::from_str("7").unwrap();
+        assert_eq!(n, RequestId::Number(7));
     }
 
     #[test]

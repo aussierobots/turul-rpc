@@ -19,7 +19,7 @@ pub mod types;
 pub use error::{JsonRpcError, JsonRpcErrorCode};
 pub use notification::JsonRpcNotification;
 pub use request::{JsonRpcRequest, RequestParams};
-pub use response::{JsonRpcMessage, JsonRpcResponse, ResponseResult};
+pub use response::{JsonRpcResponse, JsonRpcSuccessResponse, ResponseResult};
 pub use types::{JsonRpcVersion, RequestId};
 
 /// JSON-RPC 2.0 version constant.
