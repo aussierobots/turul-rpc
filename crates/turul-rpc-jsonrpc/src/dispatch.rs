@@ -95,9 +95,13 @@ fn parse_json_rpc_value(value: Value) -> Result<JsonRpcMessage, JsonRpcError> {
         {
             return Err(JsonRpcError::invalid_request(None));
         }
-        serde_json::from_value::<JsonRpcRequest>(value.clone())
+        // Extract the id (cheap: String | i64 | Null) before `value` is
+        // moved into `from_value`, so the success path no longer deep-clones
+        // the whole request tree just to keep `obj` alive for the error arm.
+        let id = extract_id(obj);
+        serde_json::from_value::<JsonRpcRequest>(value)
             .map(JsonRpcMessage::Request)
-            .map_err(|_| JsonRpcError::invalid_request(extract_id(obj)))
+            .map_err(|_| JsonRpcError::invalid_request(id))
     } else {
         serde_json::from_value::<JsonRpcNotification>(value)
             .map(JsonRpcMessage::Notification)

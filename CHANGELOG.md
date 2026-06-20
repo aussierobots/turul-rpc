@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-06-21
+
+### Changed
+
+- Parser no longer deep-clones the `serde_json::Value` tree on the request
+  path. `parse_json_rpc_value` hoists the cheap id extraction
+  (`String | i64 | Null`) ahead of the `from_value` move, so a well-formed
+  request is parsed without duplicating its method/params subtree. Internal
+  to `turul-rpc-jsonrpc`; no public type, signature, or shim surface changes.
+  Behaviour is unchanged — the invalid-request error arm still echoes the
+  same id (guarded by the `spec_conformance` id-echo tests).
+
 ## [0.2.2] - 2026-05-25
 
 ### Added
