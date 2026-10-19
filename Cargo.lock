@@ -240,7 +240,7 @@ dependencies = [
 
 [[package]]
 name = "turul-rpc"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "serde_json",
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "turul-rpc-core"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "turul-rpc-jsonrpc"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "turul-rpc-server"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "futures",
