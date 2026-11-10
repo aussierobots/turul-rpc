@@ -1,5 +1,11 @@
 # turul-rpc
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/turul/logo-dark.png">
+  <img src="docs/assets/turul/logo-light.png" alt="Turul RPC" width="600">
+</picture>
+
+
 > Typed JSON-RPC 2.0 framework for Rust. Handlers return domain errors; the dispatcher owns the wire.
 
 `turul-rpc` is a generic, transport-agnostic JSON-RPC 2.0 framework for Rust.
@@ -201,3 +207,8 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
+
+## Brand artwork
+
+Turul brand artwork is © 2026 Toast Technology Pty Ltd, all rights reserved,
+and is excluded from the software licence. See the [artwork notice](docs/assets/turul/ARTWORK-NOTICE.md) and [master assets](https://github.com/aussierobots/turul-brand).
