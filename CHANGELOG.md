@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-11-11
+
+Patch bump of `turul-rpc`, `turul-rpc-core`, `turul-rpc-jsonrpc` and
+`turul-rpc-server` (0.2.4 to 0.2.5).
+
 ### Changed
 
+- Rewrote the crate-level docs (docs.rs front pages) with a compiling example, feature tables and links. Refreshed `Cargo.lock`. No API or behaviour change.
 - Point package homepages and project links to Aussie Robots; add explicit API documentation links and review discovery metadata.
-
 
 ## [0.2.4] - 2026-10-20
 

@@ -2,7 +2,7 @@
 //!
 //! [`JsonRpcWireMessage`] is the JSON-RPC 2.0 / MCP schema `JSONRPCMessage`:
 //! any single message a peer reads off the wire without knowing direction.
-//! It is the superset of the inbound [`JsonRpcMessage`](crate::JsonRpcMessage)
+//! It is the superset of the inbound [`JsonRpcMessage`]
 //! (request | notification) that the server dispatcher consumes — it adds the
 //! `Response` arm a client or bidirectional peer needs.
 //!
