@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "JSON-RPC 2.0 wire types for turul-rpc — request, response, notification, error. Pure data, no async."
+documentation = "https://docs.rs/turul-rpc-core"
+keywords.workspace = true
+categories = ["network-programming"]
 
 [dependencies]
 serde.workspace = true

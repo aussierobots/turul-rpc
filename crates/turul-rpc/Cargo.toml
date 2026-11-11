@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Typed JSON-RPC 2.0 framework — facade re-exporting turul-rpc-core, turul-rpc-jsonrpc, and turul-rpc-server."
+documentation = "https://docs.rs/turul-rpc"
+keywords.workspace = true
+categories = ["network-programming"]
 
 [features]
 default = ["async"]

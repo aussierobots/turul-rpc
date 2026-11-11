@@ -13,7 +13,8 @@ edition = "2024"
 authors = ["Nick Hortovanyi <nick@aussierobots.com.au>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/aussierobots/turul-rpc"
-homepage = "https://github.com/aussierobots/turul-rpc"
+homepage = "https://aussierobots.com.au/turul-rpc.html"
+keywords = ["json-rpc", "jsonrpc", "rpc", "async", "protocol"]
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }

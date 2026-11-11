@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Async JSON-RPC 2.0 dispatcher, handler trait, and session context for turul-rpc."
+documentation = "https://docs.rs/turul-rpc-server"
+keywords.workspace = true
+categories = ["network-programming"]
 
 [features]
 default = ["async"]
