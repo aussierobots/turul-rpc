@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "JSON-RPC 2.0 codec, parser, and batch processing for turul-rpc."
+documentation = "https://docs.rs/turul-rpc-jsonrpc"
+keywords.workspace = true
+categories = ["network-programming"]
 
 [dependencies]
 turul-rpc-core.workspace = true
